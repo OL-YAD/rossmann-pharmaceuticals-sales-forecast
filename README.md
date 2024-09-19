@@ -8,4 +8,3 @@ Rossmann's finance team requires accurate sales forecasts to facilitate better r
 
 ## Data Source
 The dataset used in this project is sourced from the [Rossmann Store Sales|Kaggle](https://www.kaggle.com/competitions/rossmann-store-sales/data).
-
