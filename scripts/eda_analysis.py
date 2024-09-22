@@ -1,15 +1,42 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
+import holidays
 
+def compare_promo_distribution(train_data, test_data):
+    # Get the value counts and proportions
+    train_promo_counts = train_data['Promo'].value_counts()
+    test_promo_counts = test_data['Promo'].value_counts()
+    
+    # Calculate the percentage for each category
+    train_promo_percentage = (train_promo_counts / len(train_data)) * 100
+    test_promo_percentage = (test_promo_counts / len(test_data)) * 100
+    
+    # Set up the plot
+    plt.figure(figsize=(10, 6))
+    bar_width = 0.35
+    index = np.arange(2)
+    
+    # Plot bars
+    plt.bar(index, train_promo_percentage, bar_width, label='Train')
+    plt.bar(index + bar_width, test_promo_percentage, bar_width, label='Test')
+    
+    # Add the actual percentages on top of each bar
+    for i, v in enumerate(train_promo_percentage):
+        plt.text(i - bar_width/2, v + 0.5, f'{v:.2f}%', ha='center')
+        
+    for i, v in enumerate(test_promo_percentage):
+        plt.text(i + bar_width/2, v + 0.5, f'{v:.2f}%', ha='center')
 
-def plot_promo_distribution(train, test):
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    train['Promo'].value_counts().plot(kind='pie', ax=ax1, autopct='%1.1f%%')
-    test['Promo'].value_counts().plot(kind='pie', ax=ax2, autopct='%1.1f%%')
-    ax1.set_title('Promo Distribution in Train Set')
-    ax2.set_title('Promo Distribution in Test Set')
+    # Labels and title
+    plt.xlabel('Promo')
+    plt.ylabel('Percentage')
+    plt.title('Distribution of Promotions in Train and Test Sets')
+    plt.xticks(index + bar_width/2, ['No Promo', 'Promo'])
+    plt.legend()
     plt.show()
+
 
 def analyze_holiday_sales(df):
     # Ensure 'Date' is in datetime format
@@ -32,24 +59,61 @@ def analyze_holiday_sales(df):
     plt.ylabel('Sales')
     plt.show()
 
-    # Analyze sales by day of week
+# sales distribution before, during and after holidays
+def holiday_sales(df_train):
+    df_train['DayType'] = 'Regular'
+    df_train.loc[df_train['StateHoliday'] != '0', 'DayType'] = 'Holiday'
+    df_train['DayType'] = pd.Categorical(df_train['DayType'], categories=['Before Holiday', 'Holiday', 'After Holiday', 'Regular'], ordered=True)
+
+    # Mark days before and after holidays
+    holiday_dates = df_train[df_train['DayType'] == 'Holiday']['Date'].unique()
+    for date in holiday_dates:
+        before_holiday = date - pd.Timedelta(days=1)
+        after_holiday = date + pd.Timedelta(days=1)
+        df_train.loc[df_train['Date'] == before_holiday, 'DayType'] = 'Before Holiday'
+        df_train.loc[df_train['Date'] == after_holiday, 'DayType'] = 'After Holiday'
+
     plt.figure(figsize=(12, 6))
-    sns.barplot(x='DayOfWeek', y='Sales', data=df)
-    plt.title('Sales Distribution by Day of Week')
-    plt.xlabel('Day of Week')
-    plt.ylabel('Sales')
+    sns.barplot(x='DayType', y='Sales', data=df_train)
+    plt.title('Sales Distribution Before, During, and After State Holidays')
     plt.show()
 
-def analyze_seasonal_sales(df):
-    df['Month'] = df['Date'].dt.month
-    monthly_sales = df.groupby('Month')['Sales'].mean()
+
+# Seasonal Purchase Behaviors
+def analyze_seasonal_behavior(df_train):
+    df_train['Month'] = df_train['Date'].dt.month
     
+    # Create a holiday list for the country  United States
+    us_holidays = holidays.US(years=df_train['Date'].dt.year.unique())
+    
+    # Map each date to a holiday name or None
+    df_train['Holiday'] = df_train['Date'].apply(lambda x: us_holidays.get(x))
+    
+    # Mark whether it's a holiday or not
+    df_train['IsHoliday'] = df_train['Holiday'].notnull()
+    
+    # Calculate average sales during holidays
+    holiday_sales = df_train[df_train['IsHoliday']].groupby('Holiday')['Sales'].mean().reset_index()
+    
+    # Plotting Monthly Sales
     plt.figure(figsize=(12, 6))
-    monthly_sales.plot(kind='bar')
+    monthly_sales = df_train.groupby('Month')['Sales'].mean().reset_index()
+    sns.lineplot(x='Month', y='Sales', data=monthly_sales, marker='o')
     plt.title('Average Monthly Sales')
     plt.xlabel('Month')
     plt.ylabel('Average Sales')
+    plt.xticks(range(1, 13))
     plt.show()
+    
+    # Plotting Holiday Sales
+    plt.figure(figsize=(12, 6))
+    sns.barplot(x='Holiday', y='Sales', data=holiday_sales)
+    plt.xticks(rotation=90)
+    plt.title('Average Sales During Holidays')
+    plt.xlabel('Holiday')
+    plt.ylabel('Average Sales')
+    plt.show()
+
 
 # sales vs customer correlation 
 def analyze_sales_customers_correlation(df):
@@ -105,6 +169,30 @@ def enhance_promo_analysis(df):
     
     print("Top 10 stores where promos are most effective:")
     print(top_stores_for_promo)
+
+
+def analyze_store_hours(df):
+    # Group by DayOfWeek and calculate average sales
+    daily_sales = df.groupby('DayOfWeek')['Sales'].mean().reset_index()
+    
+    # Create a bar plot
+    plt.figure(figsize=(12, 6))
+    sns.barplot(x='DayOfWeek', y='Sales', data=daily_sales)
+    plt.title('Average Sales by Day of Week')
+    plt.xlabel('Day of Week')
+    plt.ylabel('Average Sales')
+    plt.xticks(range(7), ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+    plt.show()
+
+    # Analyze open/closed patterns
+    open_stores = df.groupby('DayOfWeek')['Open'].mean()
+    print("Proportion of stores open by day of week:")
+    print(open_stores)
+
+    # Analyze sales for open stores
+    open_sales = df[df['Open'] == 1].groupby('DayOfWeek')['Sales'].mean()
+    print("\nAverage sales for open stores by day of week:")
+    print(open_sales)
 
 
 def analyze_weekday_open_stores(df):
@@ -165,23 +253,41 @@ def analyze_assortment_effect(df):
     plt.ylabel('Average Sales')
     plt.show()
 
-def analyze_competition_distance(df):
+def analyze_competition_distance(df_train):
     plt.figure(figsize=(12, 6))
-    sns.scatterplot(data=df, x='CompetitionDistance', y='Sales')
+    sns.scatterplot(data=df_train, x='CompetitionDistance', y='Sales')
     plt.title('Sales vs Competition Distance')
     plt.xlabel('Competition Distance (meters)')
     plt.ylabel('Sales')
     plt.show()
-    correlation = df['Sales'].corr(df['CompetitionDistance'])
+    correlation = df_train['Sales'].corr(df_train['CompetitionDistance'])
     print(f'Sales vs Competition Distance (Correlation: {correlation:.2f})')
 
-def analyze_new_competitors(df):
-    df['CompetitorAge'] = df['Date'].dt.year - df['CompetitionOpenSinceYear']
-    df['CompetitorAge'] = df['CompetitorAge'].clip(lower=0)
+
+    df_train['CompetitionDistance_Binned'] = pd.cut(df_train['CompetitionDistance'], 
+                                                    bins=[0, 1000, 5000, 10000, np.inf], 
+                                                    labels=['0-1km', '1-5km', '5-10km', '>10km'])
     
-    plt.figure(figsize=(12, 6))
-    sns.lineplot(data=df, x='CompetitorAge', y='Sales')
-    plt.title('Average Sales vs Competitor Age')
-    plt.xlabel('Years Since Competitor Opened')
+    distance_sales = df_train.groupby('CompetitionDistance_Binned', observed=False)['Sales'].mean()
+
+    
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x=distance_sales.index, y=distance_sales.values)
+    plt.title('Average Sales by Competition Distance')
+    plt.xlabel('Distance to Nearest Competitor')
     plt.ylabel('Average Sales')
     plt.show()
+
+
+# analyze new competition distance 
+def analyze_new_competitors(df_train):
+    df_train['CompetitionOpen'] = np.where(df_train['CompetitionOpenSinceYear'] != 0, 1, 0)
+    new_competitor_effect = df_train.groupby('CompetitionOpen')['Sales'].mean()
+    
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x=['No New Competitor', 'New Competitor'], y=new_competitor_effect.values)
+    plt.title('Average Sales with and without New Competitors')
+    plt.xlabel('New Competitor Status')
+    plt.ylabel('Average Sales')
+    plt.show()
+
