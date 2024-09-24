@@ -42,7 +42,7 @@ rossmann-pharmaceuticals-sales-forecast/
     
 ```
 
-```
+
 ## Setup
 
 1. Clone the repository:
