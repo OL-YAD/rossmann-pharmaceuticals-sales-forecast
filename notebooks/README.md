@@ -20,10 +20,10 @@ Rossmann's finance team requires accurate sales forecasts to facilitate better r
 ## Notebooks Folder/ 
 
 ```
-    `preprocessing.ipynb`      : contains a scripts for or data cleaning and processing 
-    `ml_preprocess.ipynb`      : contains a script for data preparation  to train a model
-    `ml_modelling.ipynb`       : contains a script for for Regression model training 
-    `dl_modelling.ipynb`       : contains a script for LSTM model training 
+    `preprocessing.ipynb`      : contains a notebook for or data cleaning and processing 
+    `ml_preprocess.ipynb`      : contains a notebook for data preparation  to train a model
+    `ml_modelling.ipynb`       : contains a notebook for for Regression model training 
+    `dl_modelling.ipynb`       : contains a notebook for LSTM model training 
 ```
 
 
